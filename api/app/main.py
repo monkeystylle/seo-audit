@@ -1,5 +1,11 @@
-from fastapi import FastAPI
+import httpx
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from selectolax.lexbor import LexborHTMLParser
+
+from app.checks.page import check_title
+from app.fetcher import fetch_page
+from app.models import PageAudit
 
 app = FastAPI(title="SEO Audit API")
 
@@ -14,3 +20,22 @@ app.add_middleware(
 @app.get("/health")
 def health():
     return {"ok": True}
+
+
+@app.get("/audit/page", response_model=PageAudit)
+async def audit_page(url: str):
+    if not url.startswith(("http://", "https://")):
+        url = f"https://{url}"
+
+    try:
+        res = await fetch_page(url)
+    except httpx.HTTPError:
+        raise HTTPException(status_code=400, detail=f"Could not reach {url}")
+
+    tree = LexborHTMLParser(res.text)
+
+    return PageAudit(
+        url=str(res.url),
+        status_code=res.status_code,
+        checks=[check_title(tree)],
+    )
