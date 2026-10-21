@@ -3,7 +3,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from selectolax.lexbor import LexborHTMLParser
 
-from app.checks.page import check_title
+from app.checks.page import run_page_checks
 from app.fetcher import fetch_page
 from app.models import PageAudit
 
@@ -37,5 +37,5 @@ async def audit_page(url: str):
     return PageAudit(
         url=str(res.url),
         status_code=res.status_code,
-        checks=[check_title(tree)],
+        checks=run_page_checks(tree),
     )
