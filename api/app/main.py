@@ -4,8 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from selectolax.lexbor import LexborHTMLParser
 
 from app.checks.page import run_page_checks
+from app.checks.site import run_site_checks
 from app.fetcher import fetch_page
-from app.models import PageAudit
+from app.models import AuditReport
 
 app = FastAPI(title="SEO Audit API")
 
@@ -22,8 +23,8 @@ def health():
     return {"ok": True}
 
 
-@app.get("/audit/page", response_model=PageAudit)
-async def audit_page(url: str):
+@app.get("/audit", response_model=AuditReport)
+async def audit(url: str):
     if not url.startswith(("http://", "https://")):
         url = f"https://{url}"
 
@@ -34,8 +35,9 @@ async def audit_page(url: str):
 
     tree = LexborHTMLParser(res.text)
 
-    return PageAudit(
+    return AuditReport(
         url=str(res.url),
         status_code=res.status_code,
-        checks=run_page_checks(tree),
+        site_checks=await run_site_checks(res, tree),
+        page_checks=run_page_checks(tree),
     )

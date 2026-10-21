@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import type { CheckStatus, PageAudit } from '@/lib/types';
+import type { AuditReport, CheckResult, CheckStatus } from '@/lib/types';
 
 const statusStyles: Record<CheckStatus, string> = {
   pass: 'bg-green-100 text-green-800',
@@ -9,9 +9,43 @@ const statusStyles: Record<CheckStatus, string> = {
   fail: 'bg-red-100 text-red-800',
 };
 
+function CheckList({
+  title,
+  checks,
+}: {
+  title: string;
+  checks: CheckResult[];
+}) {
+  return (
+    <section className="mt-8">
+      <h2 className="text-lg font-semibold">{title}</h2>
+      <ul className="mt-3 space-y-3">
+        {checks.map(check => (
+          <li key={check.id} className="rounded-md border p-4">
+            <div className="flex items-center justify-between">
+              <span className="font-medium">{check.label}</span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[check.status]}`}
+              >
+                {check.status}
+              </span>
+            </div>
+            <p className="mt-1 text-sm">{check.message}</p>
+            {check.value && (
+              <p className="mt-2 break-words text-sm text-gray-500">
+                “{check.value}”
+              </p>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export default function Home() {
   const [url, setUrl] = useState('');
-  const [audit, setAudit] = useState<PageAudit | null>(null);
+  const [audit, setAudit] = useState<AuditReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -23,7 +57,7 @@ export default function Home() {
 
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/audit/page?url=${encodeURIComponent(url)}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/audit?url=${encodeURIComponent(url)}`,
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail ?? 'Audit failed');
@@ -60,29 +94,13 @@ export default function Home() {
       {error && <p className="mt-4 text-red-600">{error}</p>}
 
       {audit && (
-        <section className="mt-8">
-          <p className="text-sm text-gray-500">
+        <>
+          <p className="mt-8 text-sm text-gray-500">
             {audit.url} · HTTP {audit.status_code}
           </p>
-          <ul className="mt-4 space-y-3">
-            {audit.checks.map(check => (
-              <li key={check.id} className="rounded-md border p-4">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">{check.label}</span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[check.status]}`}
-                  >
-                    {check.status}
-                  </span>
-                </div>
-                <p className="mt-1 text-sm">{check.message}</p>
-                {check.value && (
-                  <p className="mt-2 text-sm text-gray-500">“{check.value}”</p>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
+          <CheckList title="Site" checks={audit.site_checks} />
+          <CheckList title="Page" checks={audit.page_checks} />
+        </>
       )}
     </main>
   );

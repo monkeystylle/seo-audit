@@ -11,7 +11,8 @@ class CheckResult(BaseModel):
     value: str | None = None
 
 
-class PageAudit(BaseModel):
+class AuditReport(BaseModel):
     url: str
     status_code: int
-    checks: list[CheckResult]
+    site_checks: list[CheckResult]
+    page_checks: list[CheckResult]

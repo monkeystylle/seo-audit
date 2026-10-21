@@ -8,8 +8,9 @@ export type CheckResult = {
   value?: string | null;
 };
 
-export type PageAudit = {
+export type AuditReport = {
   url: string;
   status_code: number;
-  checks: CheckResult[];
+  site_checks: CheckResult[];
+  page_checks: CheckResult[];
 };
