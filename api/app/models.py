@@ -26,6 +26,7 @@ class CrawledPage(BaseModel):
     title: str | None = None
     meta_description: str | None = None
     h1_count: int = 0
+    checks: list[CheckResult] = []
 
 
 class CrawlReport(BaseModel):

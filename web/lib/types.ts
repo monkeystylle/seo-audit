@@ -23,6 +23,7 @@ export type CrawledPage = {
   title: string | null;
   meta_description: string | null;
   h1_count: number;
+  checks: CheckResult[];
 };
 
 export type CrawlReport = {

@@ -4,6 +4,7 @@ from urllib.parse import urldefrag, urljoin, urlparse
 import httpx
 from selectolax.lexbor import LexborHTMLParser
 
+from app.checks.page import run_page_checks
 from app.fetcher import make_client
 from app.models import CrawledPage
 
@@ -63,6 +64,7 @@ async def fetch_one(
         (description.attributes.get("content") or "").strip() if description else None
     )
     page.h1_count = len(tree.css("h1"))
+    page.checks = run_page_checks(tree)
 
     return page, extract_links(tree, str(res.url), host)
 
