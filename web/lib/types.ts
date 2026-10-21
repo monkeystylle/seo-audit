@@ -6,6 +6,7 @@ export type CheckResult = {
   status: CheckStatus;
   message: string;
   value?: string | null;
+  details: string[];
 };
 
 export type AuditReport = {
@@ -13,4 +14,20 @@ export type AuditReport = {
   status_code: number;
   site_checks: CheckResult[];
   page_checks: CheckResult[];
+};
+
+export type CrawledPage = {
+  url: string;
+  status_code: number;
+  found_on: string | null;
+  title: string | null;
+  meta_description: string | null;
+  h1_count: number;
+};
+
+export type CrawlReport = {
+  start_url: string;
+  pages_crawled: number;
+  checks: CheckResult[];
+  pages: CrawledPage[];
 };

@@ -1,13 +1,27 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import type { AuditReport, CheckResult, CheckStatus } from '@/lib/types';
+import type {
+  AuditReport,
+  CheckResult,
+  CheckStatus,
+  CrawlReport,
+} from '@/lib/types';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 const statusStyles: Record<CheckStatus, string> = {
   pass: 'bg-green-100 text-green-800',
   warn: 'bg-amber-100 text-amber-800',
   fail: 'bg-red-100 text-red-800',
 };
+
+async function getJson<T>(path: string): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail ?? 'Request failed');
+  return data;
+}
 
 function CheckList({
   title,
@@ -22,7 +36,7 @@ function CheckList({
       <ul className="mt-3 space-y-3">
         {checks.map(check => (
           <li key={check.id} className="rounded-md border p-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4">
               <span className="font-medium">{check.label}</span>
               <span
                 className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[check.status]}`}
@@ -36,6 +50,15 @@ function CheckList({
                 “{check.value}”
               </p>
             )}
+            {check.details.length > 0 && (
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-600">
+                {check.details.map(detail => (
+                  <li key={detail} className="break-words">
+                    {detail}
+                  </li>
+                ))}
+              </ul>
+            )}
           </li>
         ))}
       </ul>
@@ -46,28 +69,47 @@ function CheckList({
 export default function Home() {
   const [url, setUrl] = useState('');
   const [audit, setAudit] = useState<AuditReport | null>(null);
+  const [crawl, setCrawl] = useState<CrawlReport | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [crawlError, setCrawlError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [crawling, setCrawling] = useState(false);
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  async function runAudit(target: string) {
     setLoading(true);
-    setError(null);
-    setAudit(null);
-
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/audit?url=${encodeURIComponent(url)}`,
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail ?? 'Audit failed');
-      setAudit(data);
+      setAudit(await getJson<AuditReport>(`/audit?url=${target}`));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Audit failed');
     } finally {
       setLoading(false);
     }
   }
+
+  async function runCrawl(target: string) {
+    setCrawling(true);
+    try {
+      setCrawl(await getJson<CrawlReport>(`/crawl?url=${target}`));
+    } catch (err) {
+      setCrawlError(err instanceof Error ? err.message : 'Crawl failed');
+    } finally {
+      setCrawling(false);
+    }
+  }
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setCrawlError(null);
+    setAudit(null);
+    setCrawl(null);
+
+    const target = encodeURIComponent(url);
+    runAudit(target);
+    runCrawl(target);
+  }
+
+  const busy = loading || crawling;
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-16">
@@ -84,10 +126,10 @@ export default function Home() {
         />
         <button
           type="submit"
-          disabled={loading}
+          disabled={busy}
           className="rounded-md bg-black px-4 py-2 text-white disabled:opacity-50"
         >
-          {loading ? 'Checking…' : 'Audit'}
+          {busy ? 'Checking…' : 'Audit'}
         </button>
       </form>
 
@@ -101,6 +143,21 @@ export default function Home() {
           <CheckList title="Site" checks={audit.site_checks} />
           <CheckList title="Page" checks={audit.page_checks} />
         </>
+      )}
+
+      {crawling && (
+        <p className="mt-8 text-sm text-gray-500">
+          Crawling the whole site. This can take up to a minute…
+        </p>
+      )}
+
+      {crawlError && <p className="mt-8 text-red-600">{crawlError}</p>}
+
+      {crawl && (
+        <CheckList
+          title={`All pages (${crawl.pages_crawled} crawled)`}
+          checks={crawl.checks}
+        />
       )}
     </main>
   );

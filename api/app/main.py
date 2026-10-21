@@ -3,6 +3,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from selectolax.lexbor import LexborHTMLParser
 
+from app.checks.crawl import run_crawl_checks
 from app.checks.page import run_page_checks
 from app.checks.site import run_site_checks
 from app.crawler import crawl
@@ -57,4 +58,9 @@ async def crawl_site(url: str, limit: int = Query(default=50, ge=1, le=200)):
     start_url = str(res.url)
     pages = await crawl(start_url, limit)
 
-    return CrawlReport(start_url=start_url, pages_crawled=len(pages), pages=pages)
+    return CrawlReport(
+        start_url=start_url,
+        pages_crawled=len(pages),
+        checks=run_crawl_checks(pages),
+        pages=pages,
+    )

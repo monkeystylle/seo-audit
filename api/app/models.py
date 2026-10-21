@@ -9,6 +9,7 @@ class CheckResult(BaseModel):
     status: Literal["pass", "warn", "fail"]
     message: str
     value: str | None = None
+    details: list[str] = []
 
 
 class AuditReport(BaseModel):
@@ -16,6 +17,7 @@ class AuditReport(BaseModel):
     status_code: int
     site_checks: list[CheckResult]
     page_checks: list[CheckResult]
+
 
 class CrawledPage(BaseModel):
     url: str
@@ -29,4 +31,5 @@ class CrawledPage(BaseModel):
 class CrawlReport(BaseModel):
     start_url: str
     pages_crawled: int
+    checks: list[CheckResult]
     pages: list[CrawledPage]
