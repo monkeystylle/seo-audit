@@ -34,3 +34,9 @@ class CrawlReport(BaseModel):
     pages_crawled: int
     checks: list[CheckResult]
     pages: list[CrawledPage]
+
+class SpeedReport(BaseModel):
+    url: str
+    strategy: Literal["mobile", "desktop"]
+    score: int
+    checks: list[CheckResult]
