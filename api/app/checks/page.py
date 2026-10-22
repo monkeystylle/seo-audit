@@ -80,7 +80,7 @@ def check_h1(tree: LexborHTMLParser) -> CheckResult:
             message="The page has no H1 heading.",
         )
 
-    first = headings[0].text(strip=True)
+    first = headings[0].text(separator=" ", strip=True)
 
     if count > 1:
         return CheckResult(

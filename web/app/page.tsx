@@ -3,7 +3,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { CheckList } from '@/components/check-list';
 import { PageList } from '@/components/page-list';
-import type { AuditReport, CrawlReport } from '@/lib/types';
+import { SpeedError, SpeedResult } from '@/components/speed-report';
+import type { AuditReport, CrawlReport, SpeedReport } from '@/lib/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -16,19 +17,28 @@ async function getJson<T>(path: string): Promise<T> {
 
 export default function Home() {
   const [url, setUrl] = useState('');
+  const [submittedUrl, setSubmittedUrl] = useState('');
+
   const [audit, setAudit] = useState<AuditReport | null>(null);
   const [crawl, setCrawl] = useState<CrawlReport | null>(null);
+  const [speed, setSpeed] = useState<SpeedReport | null>(null);
+
   const [error, setError] = useState<string | null>(null);
   const [crawlError, setCrawlError] = useState<string | null>(null);
+  const [speedError, setSpeedError] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [crawling, setCrawling] = useState(false);
+  const [testingSpeed, setTestingSpeed] = useState(false);
+
   const [seconds, setSeconds] = useState(0);
+  const busy = loading || crawling || testingSpeed;
 
   useEffect(() => {
-    if (!crawling) return;
+    if (!busy) return;
     const timer = setInterval(() => setSeconds(s => s + 1), 1000);
     return () => clearInterval(timer);
-  }, [crawling]);
+  }, [busy]);
 
   async function runAudit(target: string) {
     setLoading(true);
@@ -52,20 +62,33 @@ export default function Home() {
     }
   }
 
+  async function runSpeed(target: string) {
+    setTestingSpeed(true);
+    try {
+      setSpeed(await getJson<SpeedReport>(`/speed?url=${target}`));
+    } catch (err) {
+      setSpeedError(err instanceof Error ? err.message : 'Speed test failed');
+    } finally {
+      setTestingSpeed(false);
+    }
+  }
+
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setError(null);
-    setCrawlError(null);
     setAudit(null);
     setCrawl(null);
+    setSpeed(null);
+    setError(null);
+    setCrawlError(null);
+    setSpeedError(null);
     setSeconds(0);
+    setSubmittedUrl(url.startsWith('http') ? url : `https://${url}`);
 
     const target = encodeURIComponent(url);
     runAudit(target);
     runCrawl(target);
+    runSpeed(target);
   }
-
-  const busy = loading || crawling;
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-16">
@@ -101,15 +124,22 @@ export default function Home() {
         </>
       )}
 
+      {testingSpeed && (
+        <p className="mt-8 text-sm text-gray-500">
+          Testing page speed with Google… {seconds}s. Slow sites can take a few
+          minutes.
+        </p>
+      )}
+      {speedError && <SpeedError url={submittedUrl} message={speedError} />}
+      {speed && <SpeedResult report={speed} />}
+
       {crawling && (
         <p className="mt-8 text-sm text-gray-500">
           Crawling the whole site… {seconds}s. Larger sites can take up to a
           minute.
         </p>
       )}
-
       {crawlError && <p className="mt-8 text-red-600">{crawlError}</p>}
-
       {crawl && (
         <>
           <CheckList

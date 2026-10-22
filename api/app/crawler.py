@@ -48,7 +48,8 @@ async def fetch_one(
     except httpx.HTTPError:
         return CrawledPage(url=url, status_code=0, found_on=found_on), []
 
-    page = CrawledPage(url=url, status_code=res.status_code, found_on=found_on)
+    final_url = normalize_url(str(res.url))
+    page = CrawledPage(url=final_url, status_code=res.status_code, found_on=found_on)
 
     is_html = "text/html" in res.headers.get("content-type", "")
     if res.status_code != 200 or not is_html:
@@ -59,7 +60,7 @@ async def fetch_one(
     title = tree.css_first("title")
     description = tree.css_first('meta[name="description"]')
 
-    page.title = title.text(strip=True) if title else None
+    page.title = title.text(separator=" ", strip=True) if title else None
     page.meta_description = (
         (description.attributes.get("content") or "").strip() if description else None
     )
@@ -75,6 +76,7 @@ async def crawl(start_url: str, limit: int) -> list[CrawledPage]:
     seen = {start_url}
     queue: list[tuple[str, str | None]] = [(start_url, None)]
     pages: list[CrawledPage] = []
+    crawled: set[str] = set()
 
     async with make_client() as client:
         while queue:
@@ -86,6 +88,10 @@ async def crawl(start_url: str, limit: int) -> list[CrawledPage]:
             )
 
             for page, links in results:
+                if page.url in crawled:
+                    continue
+                crawled.add(page.url)
+                seen.add(page.url)
                 pages.append(page)
                 for link in links:
                     if link not in seen and len(seen) < limit:

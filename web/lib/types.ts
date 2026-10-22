@@ -32,3 +32,10 @@ export type CrawlReport = {
   checks: CheckResult[];
   pages: CrawledPage[];
 };
+
+export type SpeedReport = {
+  url: string;
+  strategy: 'mobile' | 'desktop';
+  score: number;
+  checks: CheckResult[];
+};
